@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="en" ng-app="fuselageMaker" ng-controller="FuselageMakerCtrl">
+<head>
+  <meta charset="utf-8">
+  <title>Fuselage Maker</title>
+  <link rel="stylesheet" href="css/app.css"/>
+  <!-- <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.7/angular.js"></script>  -->
+
+  <script src="lib/angular/angular.js"></script>
+  <!-- <script src="lib/angular/angular-route.js"></script> -->
+  <script src="lib/math.min.js"></script>
+  <script src="lib/clipper.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/services.js"></script>
+  <script src="js/controllers.js"></script>
+  <script src="js/filters.js"></script>
+  <script src="js/directives.js"></script>  
+  <script src="lib/ngDraggable.js"></script>
+</head>
+<body>
+
+<div id='the-toolbox-2' class="toolbox">
+  <div class="menuBackground">
+    <ul class="dropDownMenu">
+      <li><a href="#">File</a>
+        <ul>
+          <li ng-click='clear_op();set_3view();'><a href="#">Set Background 3-view</a></li>
+          <li ng-click='clear_op();save_data()'><a href="#">Quick Save</a></li>
+          <li ng-click='clear_op();restore_data()'><a href="#">Quick Restore</a></li>
+          <li ng-click='clear_op();make_fuselage();download_file(fuselage_serialized, "fuselage.json", "application/json");'><a href="#">Save Work To File</a></li>
+          <li ng-click='clear_op();set_fuselage();'><a href="#">Open Work From File</a></li>
+        </ul>
+      </li>
+      <li><a href="#">Define Side View</a>
+        <ul>
+          <li ng-click='clear_op();set_box(sst.side.zone)'><a href="#">Set Side View Zone Box</a></li>
+          <li ng-click='clear_op();set_line(sst.side.reference_line)'><a href="#">Define reference line</a></li>
+          <li ng-click='clear_op();set_arc(sst.side.top_outline, true, "side_top_outline")'><a href="#">Digitize fuselage outline upper</a></li>
+          <li ng-click='clear_op();set_arc(sst.side.bottom_outline, true, "side_bottom_outline")'><a href="#">Digitize fuselage outline lower</a></li>
+        </ul>
+      </li>
+      <li><a href="#">Define Top/Bottom View</a>
+        <ul>
+          <li ng-click='clear_op();set_box(sst.top.zone)'><a href="#">Set Top/Bottom View Zone Box</a></li>
+          <li ng-click='clear_op();set_line(sst.top.reference_line)'><a href="#">Define center line</a></li>
+          <li ng-click='clear_op();set_arc(sst.top.left_outline, true)'><a href="#">Digitize fuselage outline left</a></li>
+          <li ng-click='clear_op();set_arc(sst.top.right_outline, true)'><a href="#">Digitize fuselage outline right</a></li>
+        </ul>
+      </li>
+      <li><a href="#">Digitize Cross Sections</a>
+        <ul>
+          <li ng-click='clear_op();set_xsec_point_and_arc(sst.xsecs, sst.top, sst.side);sst.xsec.is_dirty=true;'><a href="#">Add a new cross section</a></li>
+          <li ng-click='clear_op();destroy_any("one", "xsecs", "xsec", "cross section", "cross sections", sst2.selected_xsec);'><a href="#">Delete SELECTED cross section(s)</a></li>
+          <li ng-click='clear_op();destroy_any("all", "xsecs", "xsec", "cross section", "cross sections")'><a href="#">Delete ALL cross sections</a></li>
+          <li ng-click='clear_op();clean_up_xsecs()'><a href="#">Clean up cross sections (removes malformed)</a></li>
+        </ul>
+      </li>
+      <li><a href="#">Formers/Bulkheads</a>
+        <ul>
+          <li ng-click='clear_op();set_bulkhead_arc(sst.bulkheads, sst.top, sst.side)'><a href="#">Mark Locations of Desired Formers</a></li>
+          <li ng-click='clear_op();generate_bulkheads_simplified();'><a href="#">Generate Formers</a></li>
+          <li ng-click='clear_op("keep_bulkheads");destroy_any("one", "bulkheads", "bulk", "former", "formers", sst2.selected_bulkhead);'><a href="#">Delete SELECTED former(s)</a></li>
+          <li ng-click='clear_op();destroy_any("all", "bulkheads", "bulk", "bulkhead", "bulkheads");'><a href="#">Delete ALL Formers</a></li>
+          <li ng-click='clear_op("keep_bulkheads");make_svg_file();download_file(sst2.svg, "bulkheads.svg", "image/svg+xml");'><a href="#">Save Formers to a file</a></li>
+        </ul>
+      </li>
+      <li><a href="#">&nbsp;&nbsp;Other Commands&nbsp;&nbsp;</a>
+        <ul>
+          <li ng-click='clear_op("keep_bulkheads");set_plan_image("", false)'><a href="#">Hide plan image</a></li>
+          <li ng-click='clear_op("keep_bulkheads");set_plan_image("img/p51_side.jpg", true)'><a href="#">Show plan image</a></li>
+          <li ng-click='clear_op();model_integrity_check()'><a href="#">Model Integrity Check & Repair</a></li>
+          <li>&nbsp;&nbsp;FuselageMaker v. {{version}}&nbsp;&nbsp;</li>
+        </ul>
+      </li>
+    </ul>
+  </div>
+
+  <div class="opaque-div">    
+    <a href="#" ng-click="set_drawing_scale('+');" title="Zoom in 30%"><img src="img/scale_up.png"/></a> <a href="#" ng-click="set_drawing_scale('-');"title="Zoom out 30%"><img src="img/scale_down.png"/></a>
+    <span class="bulkhead-menu" ng-show="sst2.bulkhead_context_on">
+      <a href="#" ng-click="relief_exterior_controls();" title="Create relief/offset for outer sheeting and/or interior for rubber clearence"><img src="img/ShaveExterior.png"/></a>
+    </span>
+    <span class="bulkhead-menu" ng-show="sst2.bulkhead_context_on">
+      <a href="#" ng-click="cnc_exterior_controls();" title="Create shapes for foam cutting"><img src="img/CNCOutput.png"/></a>
+    </span>    
+    <br/>
+    <div ng-hide="!sst2.show_button">
+      <div ng-hide="!sst2.show_bulkhead_controls">
+        <input type="radio" name="bulkhead-mode" ng-model="sst2.generation_mode" value="normal"> Normal Interpolation<br>
+        <input type="radio" name="bulkhead-mode" ng-model="sst2.generation_mode" value="extrapolate tail side"> Extrapolate from tail-side<br>
+        <input type="radio" name="bulkhead-mode" ng-model="sst2.generation_mode" value="extrapolate nose side"> Extrapolate from nose-side<br>
+      </div>
+      <a id="done-button" href="#" ng-click='done_button()' class='button'>Done</a>
+      <a id="undo-button" href="#" ng-click='undo_point()' class='button'>Undo Point</a>
+    </div>
+    <div ng-hide="sst2.the_set_context != 'relief'" class="context-set">
+      Relieve (# pixels offset measured from exterior): 
+      <input type="text" ng-model="sst2.relief_width1" class="relief-field">
+      Optional 2nd relief:
+      <input type="text" ng-model="sst2.relief_width2" class="relief-field">
+      &nbsp;&nbsp;&nbsp;&nbsp;
+      <button ng-click="do_offset_clipper()">Formers Relieve/Offset</button>
+      &nbsp;&nbsp;&nbsp;&nbsp;
+      <button ng-click="delete_relief()">Delete ALL Relieved/Offset Formers</button> 
+    </div>
+    <div ng-hide="sst2.the_set_context != 'cnc'" class="context-set">
+      Desired foam thickness (# pixels offset measured from exterior): 
+      <input type="text" ng-model="sst2.cnc_thickness" class="relief-field">
+      &nbsp;&nbsp;&nbsp;&nbsp;
+      <button ng-click="do_cnc_clipper()">Make Thick Formers</button>
+      &nbsp;&nbsp;&nbsp;&nbsp;
+      <button ng-click="delete_relief()">Delete ALL Relieved/Offset Formers</button> 
+    </div>    
+    <div ng-hide="sst2.the_set_context != 'make-arc'" class="context-set">
+      Straight line: 
+      <input type="radio" ng-model="sst2.make_arc_type" value="normal">
+      &nbsp;&nbsp;&nbsp;&nbsp;
+      Bezier:
+      <input type="radio" ng-model="sst2.make_arc_type" value="bezier">
+      &nbsp;&nbsp;&nbsp;&nbsp;
+      <a id="done-button" href="#" ng-click='done_button()' class='button'>Done</a>
+      <a id="undo-button" href="#" ng-click='undo_point()' class='button'>Undo Point</a> 
+    </div>    
+    <div ng-hide="sst2.the_set_context != 'stringer'" class="context-set">
+    </div>    
+    <br/><br/>
+    <div>
+      <span class="instruction">{{instruction}}</span>
+      <br/>&nbsp;
+    </div>
+
+    <div ng-hide="!sst2.show_select_background" id="background-loader">
+      <input type="file" id="background_file" name="background_file"/>
+      <button ng-click="add_image()">Set as Background</button>
+      <br/>&nbsp;
+    </div>
+
+    <div ng-hide="!sst2.show_select_fuselage" id="fuselage-loader">
+      <input type="file" id="fuselage_file" name="background_file"/>
+      <button ng-click="add_fuselage()">Load Fuselage File</button>
+      <br/>&nbsp;
+    </div>
+  </div>
+  <div ng-init="initialize_toolbox()"></div>
+</div>
+<div id="top-spacer"></div>
+<div ng-show="sst2.show_bulkheads" ng-style="{'-webkit-transform':'scale('+$scope.sst2.scale+')','-moz-transform':'scale('+$scope.sst2.scale+')','-webkit-transform-origin-x':'0px','-webkit-transform-origin-y':'0px','-moz-transform-origin':'0px 0px','transform': 'scale('+sst2.scale+')','transform-origin': '0px 0px 0px'}">
+  <br/><br/><br/>
+  <svg id="svg-bulkheads" ng-attr-width="{{3000 * sst2.scale}}" ng-attr-height="{{350 * sst2.scale}}">
+    <!-- All final bulkheads -->
+    <g ng-show="sst.show_final_bulkheads" ng-repeat="bulkhead in sst.bulkheads">
+      <g ng-repeat="point in bulkhead.shape">
+        <line ng-show="$index > 0"
+          ng-attr-x1="{{sst.bulkheads[$parent.$index].shape[$index-1].x + sst2.bulkhead_placement_xy.x + sst.bulkheads[$parent.$index].display_offset.x}}"
+          ng-attr-y1="{{sst.bulkheads[$parent.$index].shape[$index-1].y + sst2.bulkhead_placement_xy.y + sst.bulkheads[$parent.$index].display_offset.y}}"
+          ng-attr-x2="{{point.x + sst2.bulkhead_placement_xy.x + sst.bulkheads[$parent.$index].display_offset.x}}"
+          ng-attr-y2="{{point.y + sst2.bulkhead_placement_xy.y + sst.bulkheads[$parent.$index].display_offset.y}}"
+          ng-attr-stroke-width="{{1 / sst2.scale}}" stroke="lime" fill="none"/>
+      </g>
+      <g ng-repeat="relief_shape in bulkhead.relief_shapes track by $index">
+        <g ng-repeat="point in relief_shape track by $index">
+          <line ng-show="$index > 0"
+            ng-attr-x1="{{relief_shape[$index-1].x + sst2.bulkhead_placement_xy.x + sst.bulkheads[$parent.$parent.$index].display_offset.x}}"
+            ng-attr-y1="{{relief_shape[$index-1].y + sst2.bulkhead_placement_xy.y + sst.bulkheads[$parent.$parent.$index].display_offset.y}}"
+            ng-attr-x2="{{point.x + sst2.bulkhead_placement_xy.x + sst.bulkheads[$parent.$parent.$index].display_offset.x}}"
+            ng-attr-y2="{{point.y + sst2.bulkhead_placement_xy.y + sst.bulkheads[$parent.$parent.$index].display_offset.y}}"
+            ng-attr-stroke-width="{{1 / sst2.scale}}" stroke="red" fill="none"/>
+        </g>
+        <g ng-attr-id="registration-point-{{$index}}" class="registration-point" ng-show="sst2.the_set_context == 'cnc'">
+          <!-- Add in a registration mark -->
+          <circle ng-attr-cx="{{sst2.bulkhead_placement_xy.x  + sst.bulkheads[$parent.$index].display_offset.x}}" 
+          ng-attr-cy="{{sst.bulkheads[$parent.$index].display_offset.y}}"
+          r="4"
+          fill="black"
+          />
+        </g>
+      </g> 
+      <line ng-show="sst.show_final_bulkheads"
+        ng-attr-x1="{{sst.bulkheads[$index].shape[0].x + sst2.bulkhead_placement_xy.x + sst.bulkheads[$index].display_offset.x}}"
+        ng-attr-y1="{{sst.bulkheads[$index].shape[0].y + sst2.bulkhead_placement_xy.y + sst.bulkheads[$index].display_offset.y}}"
+        ng-attr-x2="{{sst.bulkheads[$index].shape[sst.bulkheads[$index].shape.length-1].x + sst2.bulkhead_placement_xy.x + sst.bulkheads[$index].display_offset.x}}"
+        ng-attr-y2="{{sst.bulkheads[$index].shape[sst.bulkheads[$index].shape.length-1].y + sst2.bulkhead_placement_xy.y + sst.bulkheads[$index].display_offset.y}}"
+        ng-attr-stroke-width="{{1 / sst2.scale}}" stroke="lime" fill="none"/>
+    </g>
+  </svg>
+  <button id="save-final-button" type="button" ng-click='make_svg_file();download_file(sst2.svg, "bulkheads.svg", "image/svg+xml");'><a href="#">Save To File</a></button>
+</div>
+
+<div ng-style="{'-webkit-transform':'scale('+$scope.sst2.scale+')','-moz-transform':'scale('+$scope.sst2.scale+')','-webkit-transform-origin-x':'0px','-webkit-transform-origin-y':'0px','-moz-transform-origin':'0px 0px','transform': 'scale('+sst2.scale+')','transform-origin': '0px 0px 0px'}">
+<img ng-show="sst2.show_background" id="back-image" ng-src="{{background_image()}}" />
+<div id="back-image-div" ng-click="click_on_image($event)" class="desktop-panel" ng-attr-style="{{sst.background_3view.length > 0 ? 'background-image: url(data:image/jpg;base64,'+sst.background_3view+') no-repeat;' : 'background: url('+sst.plan_image+') no-repeat;'}}">
+<div id="the-svg-div">
+<svg id="the-svg" ng-attr-width="{{3000 * sst2.scale}}" ng-attr-height="{{3000 * sst2.scale}}">
+<rect id="sideview-box"
+  ng-show="sst.side.zone.lower_left.x != null && sst.side.zone.lower_left.y != null && sst.side.zone.upper_right.x != null && sst.side.zone.upper_right.y != null"
+  ng-attr-x="{{sst.side.zone.lower_left.x}}"
+  ng-attr-y="{{sst.side.zone.upper_right.y}}"
+  ng-attr-width="{{Math.abs(sst.side.zone.upper_right.x - sst.side.zone.lower_left.x)}}"
+  ng-attr-height="{{Math.abs(sst.side.zone.lower_left.y - sst.side.zone.upper_right.y)}}"
+  ng-attr-stroke-width="{{5 / sst2.scale}}" stroke="lime" fill="none" />
+<rect id="topview-box" ng-attr-x="{{sst.top.zone.lower_left.x}}"
+  ng-show="sst.top.zone.lower_left.x != null && sst.top.zone.lower_left.y != null && sst.top.zone.upper_right.x != null && sst.top.zone.upper_right.y != null"
+  ng-attr-y="{{sst.top.zone.upper_right.y}}"
+  ng-attr-width="{{Math.abs(sst.top.zone.upper_right.x - sst.top.zone.lower_left.x)}}"
+  ng-attr-height="{{Math.abs(sst.top.zone.lower_left.y - sst.top.zone.upper_right.y)}}"
+  ng-attr-stroke-width="{{5 / sst2.scale}}" stroke="cornflowerblue" fill="none" />
+<line id="sideview-ref-line"
+  ng-show="sst.side.reference_line.nose.x != null && sst.side.reference_line.nose.y != null && sst.side.reference_line.tail.x != null && sst.side.reference_line.tail.y != null"
+  ng-attr-x1="{{sst.side.reference_line.nose.x}}"
+  ng-attr-y1="{{sst.side.reference_line.nose.y}}"
+  ng-attr-x2="{{sst.side.reference_line.tail.x}}"
+  ng-attr-y2="{{sst.side.reference_line.tail.y}}"
+  ng-attr-stroke-width="{{1 / sst2.scale}}" stroke="orangered" fill="none" />
+<line id="topview-ref-line" ng-attr-x1="{{sst.top.reference_line.nose.x}}"
+  ng-show="sst.top.reference_line.nose.x != null && sst.top.reference_line.nose.y != null && sst.top.reference_line.tail.x != null && sst.top.reference_line.tail.y != null"
+  ng-attr-y1="{{sst.top.reference_line.nose.y}}"
+  ng-attr-x2="{{sst.top.reference_line.tail.x}}"
+  ng-attr-y2="{{sst.top.reference_line.tail.y}}"
+  ng-attr-stroke-width="{{1 / sst2.scale}}" stroke="orangered" fill="none" />
+
+<!-- All top bulkhead locations -->
+<g ng-repeat="this_bulk in sst.top.display.bulk">
+  <line
+    ng-attr-x1="{{this_bulk.x1}}"
+    ng-attr-y1="{{this_bulk.y1}}"
+    ng-attr-x2="{{this_bulk.x2}}"
+    ng-attr-y2="{{this_bulk.y2}}"
+    ng-attr-stroke-width="{{1 / sst2.scale}}" stroke="lime" fill="none"/>
+  <line ng-click="select_bulkhead($index,$event)"
+    ng-attr-x1="{{this_bulk.x1}}"
+    ng-attr-y1="{{this_bulk.y1}}"
+    ng-attr-x2="{{this_bulk.x2}}"
+    ng-attr-y2="{{this_bulk.y2}}"
+    ng-attr-stroke-width="{{12 / sst2.scale}}" stroke="blue" fill="none" opacity="0.0"/>
+  <rect ng-show="sst2.selected_bulkhead.indexOf($index) != -1"
+    ng-attr-x="{{this_bulk.x1 - 4 / sst2.scale}}"
+    ng-attr-y="{{this_bulk.y1 - 4 / sst2.scale}}"
+    ng-attr-width="{{8 / sst2.scale}}"
+    ng-attr-height="{{8 / sst2.scale}}"
+    fill="lime"/>
+  <rect ng-show="sst2.selected_bulkhead.indexOf($index) != -1"
+    ng-attr-x="{{this_bulk.x2 - 4 / sst2.scale}}"
+    ng-attr-y="{{this_bulk.y2 - 4 / sst2.scale}}"
+    ng-attr-width="{{8 / sst2.scale}}"
+    ng-attr-height="{{8 / sst2.scale}}"
+    fill="lime"/>
+</g>
+
+<!-- All side bulkhead locations -->
+<g ng-repeat="this_bulk in sst.side.display.bulk">
+  <line
+    ng-attr-x1="{{this_bulk.x1}}"
+    ng-attr-y1="{{this_bulk.y1}}"
+    ng-attr-x2="{{this_bulk.x2}}"
+    ng-attr-y2="{{this_bulk.y2}}"
+    ng-attr-stroke-width="{{1 / sst2.scale}}" stroke="lime" fill="none"/>
+  <line ng-click="select_bulkhead($index,$event)"
+    ng-attr-x1="{{this_bulk.x1}}"
+    ng-attr-y1="{{this_bulk.y1}}"
+    ng-attr-x2="{{this_bulk.x2}}"
+    ng-attr-y2="{{this_bulk.y2}}"
+    ng-attr-stroke-width="{{12 / sst2.scale}}" stroke="blue" fill="none" opacity="0.0"/>
+  <rect ng-show="sst2.selected_bulkhead.indexOf($index) != -1"
+    ng-attr-x="{{this_bulk.x1 - 4 / sst2.scale}}"
+    ng-attr-y="{{this_bulk.y1 - 4 / sst2.scale}}"
+    ng-attr-width="{{8 / sst2.scale}}"
+    ng-attr-height="{{8 / sst2.scale}}"
+    fill="lime"/>
+  <rect ng-show="sst2.selected_bulkhead.indexOf($index) != -1"
+    ng-attr-x="{{this_bulk.x2 - 4 / sst2.scale}}"
+    ng-attr-y="{{this_bulk.y2 - 4 / sst2.scale}}"
+    ng-attr-width="{{8 / sst2.scale}}"
+    ng-attr-height="{{8 / sst2.scale}}"
+    fill="lime"/>
+</g>
+
+<!-- All top xsec locations -->
+<g ng-repeat="this_xsec in sst.top.display.xsec">
+  <line
+    ng-attr-x1="{{this_xsec.x1}}"
+    ng-attr-y1="{{this_xsec.y1}}"
+    ng-attr-x2="{{this_xsec.x2}}"
+    ng-attr-y2="{{this_xsec.y2}}"
+    ng-attr-stroke-width="{{1 / sst2.scale}}" stroke="red" fill="none"/>
+  <line ng-click="select_xsec($index,$event)"
+    ng-attr-x1="{{this_xsec.x1}}"
+    ng-attr-y1="{{this_xsec.y1}}"
+    ng-attr-x2="{{this_xsec.x2}}"
+    ng-attr-y2="{{this_xsec.y2}}"
+    ng-attr-stroke-width="{{12 / sst2.scale}}" stroke="blue" fill="none" opacity="0.0"/>
+  <rect ng-show="sst2.selected_xsec.indexOf($index) != -1"
+    ng-attr-x="{{this_xsec.x1 - 4 / sst2.scale}}"
+    ng-attr-y="{{this_xsec.y1 - 4 / sst2.scale}}"
+    ng-attr-width="{{8 / sst2.scale}}"
+    ng-attr-height="{{8 / sst2.scale}}"
+    fill="red"/>
+  <rect ng-show="sst2.selected_xsec.indexOf($index) != -1"
+    ng-attr-x="{{this_xsec.x2 - 4 / sst2.scale}}"
+    ng-attr-y="{{this_xsec.y2 - 4 / sst2.scale}}"
+    ng-attr-width="{{8 / sst2.scale}}"
+    ng-attr-height="{{8 / sst2.scale}}"
+    fill="red"/>
+</g>
+
+<!-- All side xsec locations -->
+<g ng-repeat="this_xsec in sst.side.display.xsec">
+  <line
+    ng-attr-x1="{{this_xsec.x1}}"
+    ng-attr-y1="{{this_xsec.y1}}"
+    ng-attr-x2="{{this_xsec.x2}}"
+    ng-attr-y2="{{this_xsec.y2}}"
+    ng-attr-stroke-width="{{1 / sst2.scale}}" stroke="red" fill="none"/>
+  <line ng-click="select_xsec($index,$event)"
+    ng-attr-x1="{{this_xsec.x1}}"
+    ng-attr-y1="{{this_xsec.y1}}"
+    ng-attr-x2="{{this_xsec.x2}}"
+    ng-attr-y2="{{this_xsec.y2}}"
+    ng-attr-stroke-width="{{12 / sst2.scale}}" stroke="blue" fill="none" opacity="0.0"/>
+  <rect ng-show="sst2.selected_xsec.indexOf($index) != -1"
+    ng-attr-x="{{this_xsec.x1 - 4 / sst2.scale}}"
+    ng-attr-y="{{this_xsec.y1 - 4 / sst2.scale}}"
+    ng-attr-width="{{8 / sst2.scale}}"
+    ng-attr-height="{{8 / sst2.scale}}"
+    fill="red"/>
+  <rect ng-show="sst2.selected_xsec.indexOf($index) != -1"
+    ng-attr-x="{{this_xsec.x2 - 4 / sst2.scale}}"
+    ng-attr-y="{{this_xsec.y2 - 4 / sst2.scale}}"
+    ng-attr-width="{{8 / sst2.scale}}"
+    ng-attr-height="{{8 / sst2.scale}}"
+    fill="red"/>
+</g>
+
+<!--  T O P   L E F T   O U T L I N E  -->
+<g svg-zarc
+  zarc-obj="sst.top.left_outline" 
+  scale="sst2.scale" 
+  is-active="get_coord_live" 
+  color="blue" 
+  get-scaled-point-func="get_scaled_point"
+  is-drag="sst2.is_drag"
+  sst2="sst2"
+  />
+<!--  T O P   R I G H T   O U T L I N E  -->
+<g 
+  svg-zarc 
+  zarc-obj="sst.top.right_outline"
+  scale="sst2.scale" 
+  is-active="get_coord_live" 
+  color="blue" 
+  get-scaled-point-func="get_scaled_point"
+  is-drag="sst2.is_drag"
+  sst2="sst2"
+/>  
+<!--  S I D E  T O P   O U T L I N E -->
+<g 
+  svg-zarc 
+  zarc-obj="sst.side.top_outline"
+  scale="sst2.scale" 
+  is-active="get_coord_live" 
+  color="blue" 
+  get-scaled-point-func="get_scaled_point"
+  is-drag="sst2.is_drag"
+  sst2="sst2"
+/>  
+<!--  S I D E   B O T T O M   O U T L I N E  -->
+<g 
+  svg-zarc 
+  zarc-obj="sst.side.bottom_outline"
+  scale="sst2.scale" 
+  is-active="get_coord_live" 
+  color="blue" 
+  get-scaled-point-func="get_scaled_point"
+  is-drag="sst2.is_drag"
+  sst2="sst2"
+/>  
+
+<!-- A L L   X - S E C S -->
+<g ng-repeat="arcs in sst.xsecs" ng-init="xsecix = $index">
+  <g ng-repeat="arc in arcs.xsec">
+    <g 
+      svg-zarc 
+      zarc-obj="sst.xsecs[$index].xsec"
+      scale="sst2.scale" 
+      is-active="get_coord_live" 
+      color="red" 
+      get-scaled-point-func="get_scaled_point"
+      is-drag="sst2.is_drag"
+      sst2="sst2"
+    /> 
+  </g>  
+</g>
+
+  <line ng-show="arc.a && arc.b && arc.c && arc.d && !arc.is_bezier && $index < sst.side.bottom_outline.length - 1"
+    ng-attr-x1="{{arc.a.x}}"
+    ng-attr-y1="{{arc.a.y}}"
+    ng-attr-x2="{{arc.d.x}}"
+    ng-attr-y2="{{arc.d.y}}"
+    ng-attr-stroke-width="{{1 / sst2.scale}}" stroke="blue" fill="none"/>
+  <rect ng-show="arc.a && arc.b && arc.c && arc.d && !arc.is_bezier && $index < sst.side.bottom_outline.length - 1 && get_coord_live"
+    ng-attr-x="{{arc.d.x - 4 / sst2.scale}}"
+    ng-attr-y="{{arc.d.y - 4 / sst2.scale}}"
+    ng-attr-width="{{8 / sst2.scale}}"
+    ng-attr-height="{{8 / sst2.scale}}"
+    fill="blue"/>       
+           
+</g>
+
+</svg>
+</div>
+</div>
+</div>
+
+
+</body>
+</html>
