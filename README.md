@@ -1,12 +1,15 @@
 # FuselageMaker 0.10a
-CAD tool for designing model airplane fuselages. Written in AngularJS 1.2
+CAD tool for designing model airplane fuselages. Written in Javascript using AngularJS 1.5.7
 
-Access this online by going here: https://rawgit.com/marlin-mixon/FuselageMaker/master/index.html
+Service no longer available--> Access this online by going here: https://rawgit.com/marlin-mixon/FuselageMaker/master/index.html
 
 Warning, this is currently alpha-grade software and as such it may not be fully usable yet.  If you intend to proceed, please carefully read the following sections.
 
 ## Fixes/enhancements:
-12/4/2016 - Version 0.06a
+10/11/2019 - Version 0.10a 
+- Adding CNC feature to facilitate cutting fuselage out of foam.  Not fully developed.
+
+12/4/2016 
 Features -
 - Added ability to relieve bulkheads for sheeting having a constant thickness and to remove the center for rubber clearance.
 
