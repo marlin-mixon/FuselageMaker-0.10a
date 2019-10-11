@@ -1,0 +1,110 @@
+<!--  A N Y   O U T L I N E -->
+<g ng-repeat="arc in zarcObj">
+  <rect ng-show="$index == 0 && zarcObj.length == 1 && isActive"
+    ng-attr-x="{{arc.a.x - 4 / scale}}"
+    ng-attr-y="{{arc.a.y - 4 / scale}}"
+    ng-attr-width="{{8 / scale}}"
+    ng-attr-height="{{8 / scale}}"
+    fill="{{color}}"
+  />
+
+  <rect ng-show="zarcObj.length > 1 && $index == zarcObj.length - 1 && isActive"
+    ng-attr-x="{{arc.d.x - 4 / scale}}"
+    ng-attr-y="{{arc.d.y - 4 / scale}}"
+    ng-attr-width="{{8 / scale}}"
+    ng-attr-height="{{8 / scale}}"
+    fill="{{color}}"
+  />
+
+  <line ng-show="arc.a && arc.d && !arc.is_bezier"
+    ng-attr-x1="{{arc.a.x}}"
+    ng-attr-y1="{{arc.a.y}}"
+    ng-attr-x2="{{arc.d.x}}"
+    ng-attr-y2="{{arc.d.y}}"
+    ng-attr-stroke-width="{{1 / scale}}" stroke="{{color}}" fill="none"/>
+
+  <g ng-show="arc.a && arc.b && arc.c && arc.d && arc.is_bezier && $index < zarcObj.length - 1">
+    <!-- primus --> 
+    <path 
+      ng-attr-d="M {{arc.a.x}} {{arc.a.y}} C {{arc.b.x}} {{arc.b.y}} {{arc.c.x}} {{arc.c.y}} {{arc.d.x}} {{arc.d.y}}"
+      ng-attr-stroke-width="{{1 / scale}}" stroke="{{color}}" fill="none" />
+  </g>      
+  <g ng-show="arc.a && arc.b && arc.c && arc.d && arc.is_bezier && ($index == zarcObj.length - 2) && isActive"> 
+    <rect
+      ng-attr-x="{{arc.a.x - 4 / scale}}"
+      ng-attr-y="{{arc.a.y - 4 / scale}}"
+      ng-attr-width="{{8 / scale}}"
+      ng-attr-height="{{8 / scale}}"
+      fill="{{color}}"/>
+    <!-- jazz -->    
+    <rect
+      ng-attr-x="{{arc.b.x - 4 / scale}}"
+      ng-attr-y="{{arc.b.y - 4 / scale}}"
+      ng-attr-width="{{8 / scale}}"
+      ng-attr-height="{{8 / scale}}"
+      fill="{{color}}"
+      draggable
+      drag-obj="zarcObj"  
+      drag-index="{{$index}}"
+      get-scaled-point-func="getScaledPointFunc" 
+      draggify="draggify"
+      drag-sub-el="b"
+      is-drag="isDrag" 
+      sst2="sst2"
+      arc="zarcObj[$index]"
+      scale="scale"
+      color="color"
+      />        
+    <rect 
+      ng-attr-x="{{arc.d.x - 4 / scale}}"
+      ng-attr-y="{{arc.d.y - 4 / scale}}"
+      ng-attr-width="{{8 / scale}}"
+      ng-attr-height="{{8 / scale}}"
+      fill="{{color}}"/>    
+    <line 
+      ng-attr-x1="{{arc.a.x}}"
+      ng-attr-y1="{{arc.a.y}}"
+      ng-attr-x2="{{arc.b.x}}"
+      ng-attr-y2="{{arc.b.y}}"
+      ng-attr-stroke-width="{{1 / scale}}" stroke-dasharray="{{5 / scale}}, {{5 / scale}}" stroke="{{color}}" fill="none"/> 
+    <line 
+      ng-attr-x1="{{arc.c.x}}"
+      ng-attr-y1="{{arc.c.y}}"
+      ng-attr-x2="{{arc.d.x}}"
+      ng-attr-y2="{{arc.d.y}}"
+      ng-attr-stroke-width="{{1 / scale}}" stroke-dasharray="{{5 / scale}}, {{5 / scale}}" stroke="{{color}}" fill="none"/>
+    <!-- cinamon_c -->       
+    <rect 
+      ng-attr-x="{{arc.c.x - (4 / scale)}}"
+      ng-attr-y="{{arc.c.y - (4 / scale)}}"
+      ng-attr-width="{{8 / scale}}"
+      ng-attr-height="{{8 / scale}}"
+      fill="{{color}}"
+      draggable 
+      drag-obj="zarcObj" 
+      drag-index="{{$index}}"
+      get-scaled-point-func="getScaledPointFunc" 
+      draggify="draggify"
+      drag-sub-el="c"
+      is-drag="isDrag" 
+      sst2="sst2"
+      arc="zarcObj[$index]"
+      scale="scale"
+      color="color"
+      /> 
+  </g>  
+
+  <line ng-show="arc.a && arc.b && arc.c && arc.d && !arc.is_bezier && $index < zarcObj.length - 1"
+    ng-attr-x1="{{arc.a.x}}"
+    ng-attr-y1="{{arc.a.y}}"
+    ng-attr-x2="{{arc.d.x}}"
+    ng-attr-y2="{{arc.d.y}}"
+    ng-attr-stroke-width="{{1 / scale}}" stroke="{{color}}" fill="none"/>
+  <rect ng-show="arc.a && arc.b && arc.c && arc.d && !arc.is_bezier && $index < zarcObj.length - 1 && isActive"
+    ng-attr-x="{{arc.d.x - 4 / scale}}"
+    ng-attr-y="{{arc.d.y - 4 / scale}}"
+    ng-attr-width="{{8 / scale}}"
+    ng-attr-height="{{8 / scale}}"
+    fill="{{color}}"/>       
+           
+</g>
